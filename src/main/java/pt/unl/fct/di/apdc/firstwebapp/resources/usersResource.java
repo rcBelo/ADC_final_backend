@@ -219,7 +219,7 @@ public class usersResource {
 				String tokenString = extra.AuthTokenCreate(at);
 				Entity token = Entity.newBuilder(tokenKey).set("value", tokenString).build();
 				userListOut2 outUser = extra.convert(user);
-				Response r = Response.ok(g.toJson(outUser)).header("token", extra.AuthTokenCreate(at)).build();
+				Response r = Response.ok(g.toJson(outUser)).header("token", tokenString).build();
 				txn.put(log, stats, token);
 				txn.commit();
 				LOG.info("User " + data.username + " logged in sucessfully");
@@ -240,7 +240,7 @@ public class usersResource {
 		} finally {
 			if (txn.isActive()) {
 				txn.rollback();
-				return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+				return Response.status(Status.BAD_REQUEST).build();
 			}
 		}
 	}
@@ -252,10 +252,22 @@ public class usersResource {
 			@PathParam("targetUsername") String targetUsername, @QueryParam("newRole") String newRole,
 			@Context HttpHeaders headers) {
 
-		String token = headers.getHeaderString("token");
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
 
-		AuthToken at = extra.AuthTokenDecode(token);
-		String username = at.username;
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
+		
+		if(!extra.checkToken(headers.getHeaderString("token"), username)) {
+			LOG.warning("token not valid for user " + username);
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+			}
 		
 		LOG.warning(username + " attempt to change user role " + targetUsername);
 
@@ -322,6 +334,7 @@ public class usersResource {
 
 	}
 
+	//test only
 	@PUT
 	@Path("/{username}/state/{targetUsername}")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -422,11 +435,22 @@ public class usersResource {
 	public Response deleteUser(@Context HttpHeaders headers) {
 		
 		
-		
-		String token = headers.getHeaderString("token");
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
 
-		AuthToken at = extra.AuthTokenDecode(token);
-		String username = at.username;
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
+		
+		if(!extra.checkToken(headers.getHeaderString("token"), username)) {
+			LOG.warning("token not valid for user " + username);
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+			}
 		LOG.fine("Attempt to delete user: " + username);
 
 		Transaction txn = datastore.newTransaction();
@@ -449,16 +473,28 @@ public class usersResource {
 	}
 
 	@DELETE
-	@Path("/{username}/delete/{userToDelete}")
+	@Path("/delete/{userToDelete}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public Response deleteUser(@PathParam("username") String username,
+	public Response deleteUser(
 			@PathParam("userToDelete") String usernameToDelete, @Context HttpHeaders headers) {
+		
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
+
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
+		if(!extra.checkToken(headers.getHeaderString("token"), username)) {
+			LOG.warning("token not valid for user " + username);
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+			}
 
 		LOG.fine("Attempt to delete user: " + username);
-
-		String token = headers.getHeaderString("token");
-
-		AuthToken at = extra.AuthTokenDecode(token);
 
 		Transaction txn = datastore.newTransaction();
 
@@ -492,7 +528,7 @@ public class usersResource {
 			if (userToDeleteRole >= userRole) {
 				LOG.warning("Wrong delete request for user " + username + " attemps to delete " + usernameToDelete);
 				txn.rollback();
-				return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+				return Response.status(Status.BAD_REQUEST).build();
 			}
 
 			txn.delete(userToDeleteKey, tokenKey);
@@ -509,17 +545,30 @@ public class usersResource {
 	}
 
 	@PUT
-	@Path("/{username}/updateInfo/{targetUsername}")
+	@Path("/updateInfo/{targetUsername}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public Response updateUserInfo(@PathParam("username") String username,
+	public Response updateUserInfo(
 			@PathParam("targetUsername") String targetUsername, userOptionalAdminData data,
 			@Context HttpHeaders headers) {
+		
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
 
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
+
+		if(!extra.checkToken(headers.getHeaderString("token"), username)) {
+			LOG.warning("token not valid for user " + username);
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+			}
+		
 		LOG.fine(targetUsername + " attempt to change user state " + username);
-
-		String token = headers.getHeaderString("token");
-
-		AuthToken at = extra.AuthTokenDecode(token);
 
 		Transaction txn = datastore.newTransaction();
 
@@ -582,12 +631,21 @@ public class usersResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response updateUserInfo( userOptionalData data,
 			@Context HttpHeaders headers) {
-		
-		String token = headers.getHeaderString("token");
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
 
-		AuthToken at = extra.AuthTokenDecode(token);
-		
-		String username = at.username;
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
+		if(!extra.checkToken(headers.getHeaderString("token"), username)) {
+			LOG.warning("token not valid for user " + username);
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+			}
 
 		LOG.warning("Attempt to update info user: " + data.cell);
 		
@@ -626,11 +684,22 @@ public class usersResource {
 	public Response changepwd(changePwdData data,
 			@Context HttpHeaders headers) {
 		
-		String token = headers.getHeaderString("token");
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
 
-		AuthToken at = extra.AuthTokenDecode(token);
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
 		
-		String username = at.username;
+		if(!extra.checkToken(headers.getHeaderString("token"), username)) {
+			LOG.warning("token not valid for user " + username);
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+			}
 		
 		LOG.fine("Attempt to alter user pwd: " + username);
 
@@ -686,15 +755,16 @@ public class usersResource {
 
 	}
 
+	//test only
 	@GET
 	@Path("/user/{username}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response getUser(@PathParam("username") String username, @Context HttpHeaders headers) {
 
-		/*if (!extra.checkToken(headers.getHeaderString("token"), username)) {
+		if (!extra.checkToken(headers.getHeaderString("token"), username)) {
 			LOG.warning("token not valid for user " + username);
 			return Response.status(Status.BAD_REQUEST).build();
-		}*/
+		}
 
 		Transaction txn = datastore.newTransaction();
 
@@ -723,17 +793,24 @@ public class usersResource {
 	@Path("/user/me")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response getMyUser(@Context HttpHeaders headers) {
-
-		/*if (!extra.checkToken(headers.getHeaderString("token"), username)) {
-			LOG.warning("token not valid for user " + username);
-			return Response.status(Status.BAD_REQUEST).build();
-		}*/
 		
-		String token = headers.getHeaderString("token");
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
 
-		AuthToken at = extra.AuthTokenDecode(token);
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
 		
-		String username = at.username;
+		if(!extra.checkToken(headers.getHeaderString("token"), username)) {
+		LOG.warning("token not valid for user " + username);
+		return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
+		
 
 		Transaction txn = datastore.newTransaction();
 
@@ -761,11 +838,23 @@ public class usersResource {
 	@DELETE
 	@Path("/Logout")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public Response Logout(@PathParam("username") String username, @Context HttpHeaders headers) {
+	public Response Logout(@Context HttpHeaders headers) {
 
-		if (!extra.checkToken(headers.getHeaderString("token"), username)) {
-			LOG.warning("token not valid for user " + username);
-			return Response.status(Status.BAD_REQUEST).build();
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
+			LOG.warning("token not valid " + token);
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
+		
+		if(!extra.checkToken(headers.getHeaderString("token"), username)) {
+		LOG.warning("token not valid for user " + username);
+		return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
 		}
 
 		Transaction txn = datastore.newTransaction();
@@ -787,24 +876,37 @@ public class usersResource {
 
 	}
 
-	@GET
-	@Path("/token/{username}")
+	@PUT
+	@Path("/token/new")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public Response getToken(@PathParam("username") String username, @Context HttpHeaders headers) {
+	public Response getToken( @Context HttpHeaders headers) {
 
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
+
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
+		
 		Transaction txn = datastore.newTransaction();
 
 		try {
 			Key tokenKey = datastore.newKeyFactory().addAncestor(PathElement.of("User", username)).setKind("UserToken")
 					.newKey("token");
-			Entity token = txn.get(tokenKey);
-			if (token == null) {
-				txn.rollback();
-				return Response.ok(g.toJson(token)).build();
-			}
-			LOG.info("token ok " + username);
+			
+			at = new AuthToken(username, at.role);
+			String tokenString = extra.AuthTokenCreate(at);
+			Entity token = Entity.newBuilder(tokenKey).set("value", tokenString).build();
+
+			Response r = Response.ok(g.toJson(at)).header("token", tokenString).build();
+			txn.put(token);
 			txn.commit();
-			return Response.ok(g.toJson(token)).build();
+			return r;
 
 		} finally {
 			if (txn.isActive()) {
@@ -839,7 +941,7 @@ public class usersResource {
 			LOG.warning("list user");
 			
 			Query<Entity> query_USER = Query.newEntityQueryBuilder().setKind("User").setFilter(
-					CompositeFilter.and(PropertyFilter.eq("user_role", "USER"), PropertyFilter.eq("user_state", 0l), PropertyFilter.eq("user_profile", 1l)))
+					CompositeFilter.and(PropertyFilter.eq("user_role", "USER"), PropertyFilter.eq("user_state", 1l), PropertyFilter.eq("user_profile", 1l)))
 					.build();
 			LOG.warning("list user");
 			users = datastore.run(query_USER);
@@ -941,6 +1043,7 @@ public class usersResource {
 
 	}
 	
+	//error
 	@PUT
 	@Path("/uploadPhoto/{filename}")
 	@Consumes(MediaType.APPLICATION_OCTET_STREAM)

@@ -7,7 +7,7 @@ import io.jsonwebtoken.impl.DefaultClaims;
 
 public class AuthToken {
 	private static final String SECRET = "38782F413F4428472B4B6250655368566D5970337336763979244226452948404D635166546A576E5A7234743777217A25432A462D4A614E645267556B587032";
-	public static final long EXPIRATION_TIME = 1000 * 60 * 60 * 2; // 2h
+	public static final long EXPIRATION_TIME = 7200000; // 2h
 	public String username;
 	public String role;
 	public String tokenID;

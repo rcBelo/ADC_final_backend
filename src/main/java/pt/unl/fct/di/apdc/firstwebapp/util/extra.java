@@ -12,9 +12,11 @@ import io.jsonwebtoken.impl.DefaultClaims;
 public class extra {
 	private static final String SECRET = "38782F413F4428472B4B6250655368566D5970337336763979244226452948404D635166546A576E5A7234743777217A25432A462D4A614E645267556B587032";
 
-	private final static Datastore datastore = DatastoreOptions.newBuilder().setHost("http://localhost:8081")
-			.setProjectId("iconic-valve-379315").build().getService();
+	//private final static Datastore datastore = DatastoreOptions.newBuilder().setHost("http://localhost:8081")
+		//	.setProjectId("iconic-valve-379315").build().getService();
 
+	private final static Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
+	
 	public extra() {
 
 	}
