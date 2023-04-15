@@ -67,9 +67,9 @@ public class usersResource {
 
 	private final Gson g = new Gson();
 
-	//private final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
-	private final Datastore datastore = DatastoreOptions.newBuilder().setHost("http://localhost:8081")
-			.setProjectId("iconic-valve-379315").build().getService();
+	private final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
+	//private final Datastore datastore = DatastoreOptions.newBuilder().setHost("http://localhost:8081")
+		//	.setProjectId("iconic-valve-379315").build().getService();
 
 	public usersResource() {
 	}
@@ -921,15 +921,17 @@ public class usersResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response getUsers(@Context HttpHeaders headers) {
 
-		/*
-		 * if (!extra.checkToken(headers.getHeaderString("token"), username)) {
-		 * LOG.warning("token not valid for user " + username); return
-		 * Response.status(Status.BAD_REQUEST).build(); }
-		 */
+		String username;
+		AuthToken at;
+		try {
+			String token = headers.getHeaderString("token");
 
-		String token = headers.getHeaderString("token");
-
-		AuthToken at = extra.AuthTokenDecode(token);
+			at = extra.AuthTokenDecode(token);
+			
+			username = at.username;
+		} catch (Exception e) {
+			return Response.status(Status.NETWORK_AUTHENTICATION_REQUIRED).build();
+		}
 
 		String role = at.role;
 		
